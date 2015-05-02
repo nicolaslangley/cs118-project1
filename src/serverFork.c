@@ -105,9 +105,12 @@ void dostuff (int sock)
     bzero(buffer,256);
 
     // Step 3: Read from socket into buffer
+    // TODO: parse the requested file from the request
     n = read(sock,buffer,255);
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n",buffer);
+
+    // TODO: load the requested file data and create HTTP headers
 
     // Step 4: Write response to socket
     n = write(sock,"I got your message",18);
