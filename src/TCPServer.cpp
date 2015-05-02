@@ -1,4 +1,4 @@
-#include <sys/sockets.h> 
+#include <sys/socket.h> 
 #include <iostream.h>
 
 void main()
