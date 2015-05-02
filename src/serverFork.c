@@ -19,6 +19,7 @@ void sigchld_handler(int s)
 }
 
 void dostuff(int); /* function prototype */
+
 void error(char *msg)
 {
     perror(msg);
@@ -27,8 +28,7 @@ void error(char *msg)
 
 int main(int argc, char *argv[])
 {
-
-    
+    // Declare socket variables
     int sockfd, newsockfd, portno, pid;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -38,6 +38,8 @@ int main(int argc, char *argv[])
         fprintf(stderr,"ERROR, no port provided\n");
         exit(1);
     }
+
+    // Step 1: Create Socket and set port number
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
        error("ERROR opening socket");
@@ -46,13 +48,15 @@ int main(int argc, char *argv[])
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
-    
+   
+    // Bind the socket to the server address  
     if (bind(sockfd, (struct sockaddr *) &serv_addr,
              sizeof(serv_addr)) < 0) 
              error("ERROR on binding");
-    
+
+    // Step 2: Listen for connections on the socket
     listen(sockfd,5);
-    
+
     clilen = sizeof(cli_addr);
     
     /****** Kill Zombie Processes ******/
@@ -64,8 +68,10 @@ int main(int argc, char *argv[])
         exit(1);
     }
     /*********************************/
-    
+
+    // Step 2 Cont: Wait for connections to socket    
     while (1) {
+        // Create file descriptor for new connection
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         
         if (newsockfd < 0) 
@@ -93,14 +99,17 @@ int main(int argc, char *argv[])
  *****************************************/
 void dostuff (int sock)
 {
-
     int n;
     char buffer[256];
        
     bzero(buffer,256);
+
+    // Step 3: Read from socket into buffer
     n = read(sock,buffer,255);
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n",buffer);
+
+    // Step 4: Write response to socket
     n = write(sock,"I got your message",18);
     if (n < 0) error("ERROR writing to socket");
 }
