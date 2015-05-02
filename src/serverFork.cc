@@ -12,6 +12,14 @@
 #include <sys/wait.h>	/* for the waitpid() system call */
 #include <signal.h>	/* signal name macros, and the kill() prototype */
 
+// Includes for loading files
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <unistd.h>
+using namespace std;
+
 
 void sigchld_handler(int s)
 {
@@ -92,6 +100,49 @@ int main(int argc, char *argv[])
     return 0; /* we never get here */
 }
 
+/***************
+ * Load file of given name and return the characters 
+ * NOTE: only works for HTML as of now
+ ****************/
+const char* load_file(char* file_name)
+{
+    cout << "In Load_File: " << file_name << endl;
+    string line;
+    stringstream ss;
+    ifstream cur_file(file_name);
+    string data = "";
+
+    // Load the lines of the file    
+    if (cur_file.is_open()) {
+        ss.clear();
+        ss.str("");
+        while (getline(cur_file, line)) {
+            ss << line;
+        }            
+    } else {
+        error("Error opening file");
+    }
+    data = ss.str();
+    return data.c_str();
+}
+
+
+/***************
+ * Get the content type of file based on file extension 
+ * NOTE: only works for HTML as of now
+ ****************/
+const char* content_type(char* file_name)
+{
+    string file_type = "";
+    string fn(file_name);
+    if (fn.substr(fn.find_last_of(".") + 1) == "html") {
+        file_type = "html"; 
+    } else {
+        file_type = "None";
+    }
+    return file_type.c_str();
+}
+
 /******** DOSTUFF() *********************
  There is a separate instance of this function 
  for each connection.  It handles all communication
@@ -109,6 +160,10 @@ void dostuff (int sock)
     n = read(sock,buffer,255);
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n",buffer);
+
+    char* test_val = "test.html";
+    cout << "Content-Type: " << content_type(test_val) << endl;
+    cout << "Data: " << load_file(test_val) << endl;
 
     // TODO: load the requested file data and create HTTP headers
 

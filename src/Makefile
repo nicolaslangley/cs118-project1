@@ -1,9 +1,9 @@
 CC=gcc
-CFLAGS=-I.
+CFLAGS=-I. -lstdc++
 DEPS = # header file 
 OBJ = serverFork.o
 
-%.o: %.c $(DEPS)
+%.o: %.cc $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 serverFork: $(OBJ)
