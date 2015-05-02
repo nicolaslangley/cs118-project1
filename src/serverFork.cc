@@ -104,13 +104,12 @@ int main(int argc, char *argv[])
  * Load file of given name and return the characters 
  * NOTE: only works for HTML as of now
  ****************/
-const char* load_file(const char* file_name)
+void load_file(string file_name, string& output)
 {
     cout << "In Load_File: " << file_name << endl;
     string line;
     stringstream ss;
     ifstream cur_file(file_name);
-    string data = "";
 
     // Load the lines of the file    
     if (cur_file.is_open()) {
@@ -122,8 +121,7 @@ const char* load_file(const char* file_name)
     } else {
         error("Error opening file");
     }
-    data = ss.str();
-    return data.c_str();
+    output = ss.str();
 }
 
 
@@ -131,16 +129,16 @@ const char* load_file(const char* file_name)
  * Get the content type of file based on file extension 
  * NOTE: only works for HTML as of now
  ****************/
-const char* content_type(const char* file_name)
+void get_content_type(string file_name, string& output)
 {
-    string file_type = "";
-    string fn(file_name);
-    if (fn.substr(fn.find_last_of(".") + 1) == "html") {
-        file_type = "html"; 
+    string file_extension = file_name.substr(file_name.find_last_of(".") + 1);
+    if (file_extension == "html") {
+        output = "text/html"; 
+    } else if (file_extension == "jpeg" || file_extension == "jpg") {
+        output = "image/jpeg";   
     } else {
-        file_type = "None";
+        output = "None";
     }
-    return file_type.c_str();
 }
 
 /***************
@@ -175,6 +173,18 @@ void returnFilePath(char * input, string& output){
 
 }
 
+void assemble_http_header(string& header)
+{
+    // HTTP Version - Response Message
+    // close / keep-alive
+    // date (now)
+    // Server type
+    // Last-Modified
+    // Content-Length
+    // Content-Type
+
+}
+
 /******** DOSTUFF() *********************
  There is a separate instance of this function 
  for each connection.  It handles all communication
@@ -195,9 +205,11 @@ void dostuff (int sock)
     string file_name;
     returnFilePath(buffer, file_name);
     cout << "File name: " << file_name << endl;
-
-    cout << "Content-Type: " << content_type(file_name.c_str()) << endl;
-    cout << "Data: " << load_file(file_name.c_str()) << endl;
+    string content_type, data;
+    get_content_type(file_name, content_type);
+    load_file(file_name, data);
+    cout << "Content-Type: " << content_type << endl;
+    cout << "Data: " << data << endl;
 
     // TODO: load the requested file data and create HTTP headers
 
