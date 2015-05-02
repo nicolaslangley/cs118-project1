@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
  * Load file of given name and return the characters 
  * NOTE: only works for HTML as of now
  ****************/
-const char* load_file(char* file_name)
+const char* load_file(const char* file_name)
 {
     cout << "In Load_File: " << file_name << endl;
     string line;
@@ -131,7 +131,7 @@ const char* load_file(char* file_name)
  * Get the content type of file based on file extension 
  * NOTE: only works for HTML as of now
  ****************/
-const char* content_type(char* file_name)
+const char* content_type(const char* file_name)
 {
     string file_type = "";
     string fn(file_name);
@@ -141,6 +141,38 @@ const char* content_type(char* file_name)
         file_type = "None";
     }
     return file_type.c_str();
+}
+
+/***************
+ * Retrieve requested file from HTTP GET 
+ * NOTE: only works for HTML as of now
+ ****************/
+void returnFilePath(char * input, string& output){
+
+    //find "GET " in String, read until next ' '
+    char * locationOfGET = strstr(input,"GET");  //returns location of first char
+
+    char ObjectPath[255];
+
+    locationOfGET += 5;
+    
+    char * locationEndOfPath;
+    locationEndOfPath = strchr(locationOfGET,' ');
+    
+    int index = (int)(locationEndOfPath - locationOfGET);
+    
+    printf("\n");
+
+    stringstream ss;    
+    string res = "";
+    int i = 0;
+    while (i < index) {
+        ss << locationOfGET[i];
+        i++;
+    }
+    output = ss.str();
+    cout << output << endl; 
+
 }
 
 /******** DOSTUFF() *********************
@@ -160,10 +192,12 @@ void dostuff (int sock)
     n = read(sock,buffer,255);
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n",buffer);
+    string file_name;
+    returnFilePath(buffer, file_name);
+    cout << "File name: " << file_name << endl;
 
-    char* test_val = "test.html";
-    cout << "Content-Type: " << content_type(test_val) << endl;
-    cout << "Data: " << load_file(test_val) << endl;
+    cout << "Content-Type: " << content_type(file_name.c_str()) << endl;
+    cout << "Data: " << load_file(file_name.c_str()) << endl;
 
     // TODO: load the requested file data and create HTTP headers
 
