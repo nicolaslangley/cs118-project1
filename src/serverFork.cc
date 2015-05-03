@@ -247,7 +247,7 @@ void return_file_path(char * input, string& output){
 
 
 void assemble_http_header(char*& header, string request_res, string last_modified, string connect_status,
-                          string content_length, string content_type)
+                          string content_length, string content_type, int& header_length)
 {
     // HTTP Version - Response Message
     // close / keep-alive
@@ -276,6 +276,7 @@ void assemble_http_header(char*& header, string request_res, string last_modifie
     ss << "\r\n";
 
     string res = ss.str();
+    header_length = res.size() + 1;
     char* writable = new char[res.size() + 1];
     copy(res.begin(), res.end(), writable);
     writable[res.size()] = '\0';
@@ -315,11 +316,16 @@ void dostuff (int sock)
     connect_status = "keep-alive";
 
     char* header;
-    assemble_http_header(header, result, last_modified, connect_status, content_length, content_type);
+    int header_length;
+    assemble_http_header(header, result, last_modified, connect_status, content_length, content_type, header_length);
     cout << "Header: \n" << header << endl;
-
+    
     // Step 4: Write response to socket
-    n = write(sock,header,18);
-
-    if (n < 0) error("ERROR writing to socket");
+    n = write(sock,header, header_length);
+    if (n < 0) error("ERROR writing header to socket");
+    if (result == "200 OK") {
+        int data_length = atoi(content_length.c_str());
+        n = write(sock, data, data_length); 
+        if (n < 0) error("ERROR writing data to socket");
+    }
 }
