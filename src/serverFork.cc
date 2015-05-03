@@ -18,6 +18,10 @@
 #include <sstream>
 #include <iostream>
 #include <unistd.h>
+
+// Includes for getting data
+#include <time.h>
+#include <sys/stat.h>
 using namespace std;
 
 
@@ -116,13 +120,11 @@ void get_content_type(string file_name, string& output)
     }
 }
 
-
-
 /***************
  * Load text file of given name and return the characters 
  * NOTE: only works for HTML as of now
  ****************/
-void load_text_file(string file_name, char*& output)
+void load_text_file(string file_name, char*& output, string& result)
 {
     string line;
     stringstream ss;
@@ -135,8 +137,10 @@ void load_text_file(string file_name, char*& output)
         while (getline(cur_file, line)) {
             ss << line;
         }            
+        result = "200 OK";
     } else {
         error("Error opening file");
+        result = "404 Not Found";
     }
     string res = ss.str();
     char* writable = new char[res.size() + 1];
@@ -149,7 +153,7 @@ void load_text_file(string file_name, char*& output)
  * Load file of given name and return the characters 
  * NOTE: only works for HTML as of now
  ****************/
-void load_binary_file(string file_name, char*& output)
+void load_binary_file(string file_name, char*& output, string& result)
 {
     ifstream cur_file(file_name, ios::in | ios::binary | ios::ate);
 
@@ -161,12 +165,15 @@ void load_binary_file(string file_name, char*& output)
         filesize = cur_file.tellg();
         file_contents = new char[filesize];
         cur_file.seekg(0, ios::beg);
+        result = "200 OK";
         if (!cur_file.read(file_contents, filesize)) {
             cout << "Failed to read file" << endl;
+            result = "404 Not Found";
         }
         cur_file.close();
     } else {
         error("Error opening file");
+        result = "404 Not Found";
     }
     cout << "size: " << filesize << endl;
     output = file_contents;
@@ -177,25 +184,41 @@ void load_binary_file(string file_name, char*& output)
  * Load file of given name and return the data 
  * Calls either load_text_file() or load_binary_file()
  ****************/
-void load_file(string file_name, char*& output)
+void load_file(string file_name, char*& output, string& result, string& last_modified,
+               string& content_length, string& content_type)
 {
-    string content_type;
     int filesize;
     get_content_type(file_name, content_type);
+    // Download the data based on the content type
     if (content_type == "text/html") {
-        load_text_file(file_name, output);
+        load_text_file(file_name, output, result);
     } else if (content_type == "image/jpeg") {
-        load_binary_file(file_name, output);
+        load_binary_file(file_name, output, result);
     } else {
-        cout << "No file";
+        cout << "No file found" << endl;
+        result = "404 Not Found";
     }
+
+
+    // Load the last modified date for this data
+    struct stat attr;
+    stat(file_name.c_str(), &attr);
+    
+    last_modified = string(ctime(&attr.st_mtime));
+    // Strip trailing newline character
+    if (last_modified.size () > 0) last_modified.resize (last_modified.size() - 1);
+
+    // Get the size of the file
+    ifstream file(file_name, ios::ate | ios::binary);
+    content_length = to_string(file.tellg());
+    file.close();
 }
 
 /***************
  * Retrieve requested file from HTTP GET 
  * NOTE: only works for HTML as of now
  ****************/
-void returnFilePath(char * input, string& output){
+void return_file_path(char * input, string& output){
 
     //find "GET " in String, read until next ' '
     char * locationOfGET = strstr(input,"GET");  //returns location of first char
@@ -220,10 +243,11 @@ void returnFilePath(char * input, string& output){
     }
     output = ss.str();
     cout << output << endl; 
-
 }
 
-void assemble_http_header(string& header)
+
+void assemble_http_header(char*& header, string request_res, string last_modified, string connect_status,
+                          string content_length, string content_type)
 {
     // HTTP Version - Response Message
     // close / keep-alive
@@ -232,6 +256,30 @@ void assemble_http_header(string& header)
     // Last-Modified
     // Content-Length
     // Content-Type
+
+    // Get the current date
+    time_t timev = time(NULL);
+    string date = string(ctime(&timev));
+    if (date.size () > 0) date.resize (date.size() - 1);
+    string server = "Placeholder";
+
+    stringstream ss;
+    // Add the HTTP version and response message
+    // TODO: change response message based on actual outcome
+    ss << "HTTP/1.1 " << request_res << "\r\n";
+    ss << "Connection: " << connect_status << "\r\n";
+    ss << "Date: " << date << "\r\n";
+    ss << "Server: " << server << "\r\n";
+    ss << "Last-Modified: " << last_modified << "\r\n";
+    ss << "Content-Length: " << content_length << "\r\n";
+    ss << "Content-Type: " << content_type << "\r\n";
+    ss << "\r\n";
+
+    string res = ss.str();
+    char* writable = new char[res.size() + 1];
+    copy(res.begin(), res.end(), writable);
+    writable[res.size()] = '\0';
+    header = writable;
 }
 
 /******** DOSTUFF() *********************
@@ -250,19 +298,28 @@ void dostuff (int sock)
     // TODO: parse the requested file from the request
     n = read(sock,buffer,255);
     if (n < 0) error("ERROR reading from socket");
-    printf("Here is the message: %s\n",buffer);
+    printf("Here is the message: \n%s\n",buffer);
     string file_name;
-    returnFilePath(buffer, file_name);
+    return_file_path(buffer, file_name);
     cout << "File name: " << file_name << endl;
-    string content_type;
-    char* data;
-    get_content_type(file_name, content_type);
-    load_file(file_name, data);
-    cout << "Content-Type: " << content_type << endl;
-    cout << "Data: " << data << endl;
+
 
     // TODO: load the requested file data and create HTTP headers
+    string result, last_modified, connect_status, content_length, content_type;
+
+    // Load the file data
+    char* data;
+    load_file(file_name, data, result, last_modified, content_length, content_type);
+   
+    // Set connection status based on result 
+    connect_status = "keep-alive";
+
+    char* header;
+    assemble_http_header(header, result, last_modified, connect_status, content_length, content_type);
+    cout << "Header: \n" << header << endl;
+
     // Step 4: Write response to socket
-    n = write(sock,"I got your message",18);
+    n = write(sock,header,18);
+
     if (n < 0) error("ERROR writing to socket");
 }
