@@ -101,12 +101,29 @@ int main(int argc, char *argv[])
 }
 
 /***************
- * Load file of given name and return the characters 
+ * Get the content type of file based on file extension 
  * NOTE: only works for HTML as of now
  ****************/
-void load_file(string file_name, string& output)
+void get_content_type(string file_name, string& output)
 {
-    cout << "In Load_File: " << file_name << endl;
+    string file_extension = file_name.substr(file_name.find_last_of(".") + 1);
+    if (file_extension == "html") {
+        output = "text/html"; 
+    } else if (file_extension == "jpeg" || file_extension == "jpg") {
+        output = "image/jpeg";   
+    } else {
+        output = "None";
+    }
+}
+
+
+
+/***************
+ * Load text file of given name and return the characters 
+ * NOTE: only works for HTML as of now
+ ****************/
+void load_text_file(string file_name, char*& output)
+{
     string line;
     stringstream ss;
     ifstream cur_file(file_name);
@@ -121,23 +138,56 @@ void load_file(string file_name, string& output)
     } else {
         error("Error opening file");
     }
-    output = ss.str();
+    string res = ss.str();
+    char* writable = new char[res.size() + 1];
+    copy(res.begin(), res.end(), writable);
+    writable[res.size()] = '\0';
+    output = writable;
+}
+
+/***************
+ * Load file of given name and return the characters 
+ * NOTE: only works for HTML as of now
+ ****************/
+void load_binary_file(string file_name, char*& output)
+{
+    ifstream cur_file(file_name, ios::in | ios::binary | ios::ate);
+
+    ifstream::pos_type filesize;
+    char* file_contents;
+
+    // Load the lines of the file    
+    if (cur_file.is_open()) {
+        filesize = cur_file.tellg();
+        file_contents = new char[filesize];
+        cur_file.seekg(0, ios::beg);
+        if (!cur_file.read(file_contents, filesize)) {
+            cout << "Failed to read file" << endl;
+        }
+        cur_file.close();
+    } else {
+        error("Error opening file");
+    }
+    cout << "size: " << filesize << endl;
+    output = file_contents;
 }
 
 
 /***************
- * Get the content type of file based on file extension 
- * NOTE: only works for HTML as of now
+ * Load file of given name and return the data 
+ * Calls either load_text_file() or load_binary_file()
  ****************/
-void get_content_type(string file_name, string& output)
+void load_file(string file_name, char*& output)
 {
-    string file_extension = file_name.substr(file_name.find_last_of(".") + 1);
-    if (file_extension == "html") {
-        output = "text/html"; 
-    } else if (file_extension == "jpeg" || file_extension == "jpg") {
-        output = "image/jpeg";   
+    string content_type;
+    int filesize;
+    get_content_type(file_name, content_type);
+    if (content_type == "text/html") {
+        load_text_file(file_name, output);
+    } else if (content_type == "image/jpeg") {
+        load_binary_file(file_name, output);
     } else {
-        output = "None";
+        cout << "No file";
     }
 }
 
@@ -182,7 +232,6 @@ void assemble_http_header(string& header)
     // Last-Modified
     // Content-Length
     // Content-Type
-
 }
 
 /******** DOSTUFF() *********************
@@ -205,14 +254,14 @@ void dostuff (int sock)
     string file_name;
     returnFilePath(buffer, file_name);
     cout << "File name: " << file_name << endl;
-    string content_type, data;
+    string content_type;
+    char* data;
     get_content_type(file_name, content_type);
     load_file(file_name, data);
     cout << "Content-Type: " << content_type << endl;
     cout << "Data: " << data << endl;
 
     // TODO: load the requested file data and create HTTP headers
-
     // Step 4: Write response to socket
     n = write(sock,"I got your message",18);
     if (n < 0) error("ERROR writing to socket");
