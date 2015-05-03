@@ -115,6 +115,8 @@ void get_content_type(string file_name, string& output)
         output = "text/html"; 
     } else if (file_extension == "jpeg" || file_extension == "jpg") {
         output = "image/jpeg";   
+    } else if (file_extension == "gif") {
+        output = "image/gif";   
     } else {
         output = "None";
     }
@@ -175,7 +177,9 @@ void load_binary_file(string file_name, char*& output, string& result)
         error("Error opening file");
         result = "404 Not Found";
     }
-    cout << "size: " << filesize << endl;
+    cout << "Data Size 1: " << filesize << endl;
+    cout << file_contents[0] << endl;
+
     output = file_contents;
 }
 
@@ -192,13 +196,12 @@ void load_file(string file_name, char*& output, string& result, string& last_mod
     // Download the data based on the content type
     if (content_type == "text/html") {
         load_text_file(file_name, output, result);
-    } else if (content_type == "image/jpeg") {
+    } else if (content_type == "image/jpeg" || content_type == "image/gif") {
         load_binary_file(file_name, output, result);
     } else {
         cout << "No file found" << endl;
         result = "404 Not Found";
     }
-
 
     // Load the last modified date for this data
     struct stat attr;
@@ -276,7 +279,7 @@ void assemble_http_header(char*& header, string request_res, string last_modifie
     ss << "\r\n";
 
     string res = ss.str();
-    header_length = res.size() + 1;
+    header_length = res.size();
     char* writable = new char[res.size() + 1];
     copy(res.begin(), res.end(), writable);
     writable[res.size()] = '\0';
@@ -305,7 +308,7 @@ void dostuff (int sock)
     cout << "File name: " << file_name << endl;
 
 
-    // TODO: load the requested file data and create HTTP headers
+    // Load the requested file data and create HTTP headers
     string result, last_modified, connect_status, content_length, content_type;
 
     // Load the file data
@@ -321,10 +324,12 @@ void dostuff (int sock)
     cout << "Header: \n" << header << endl;
     
     // Step 4: Write response to socket
-    n = write(sock,header, header_length);
+    n = write(sock, header, header_length);
     if (n < 0) error("ERROR writing header to socket");
+    // Send data to socket
     if (result == "200 OK") {
         int data_length = atoi(content_length.c_str());
+        
         n = write(sock, data, data_length); 
         if (n < 0) error("ERROR writing data to socket");
     }
