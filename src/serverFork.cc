@@ -11,6 +11,7 @@
 #include <strings.h>
 #include <sys/wait.h>	/* for the waitpid() system call */
 #include <signal.h>	/* signal name macros, and the kill() prototype */
+#include <cstring>
 
 // Includes for loading files
 #include <fstream>
@@ -130,7 +131,7 @@ void load_text_file(string file_name, char*& output, string& result)
 {
     string line;
     stringstream ss;
-    ifstream cur_file(file_name);
+    ifstream cur_file(file_name.c_str());
 
     // Load the lines of the file    
     if (cur_file.is_open()) {
@@ -157,7 +158,7 @@ void load_text_file(string file_name, char*& output, string& result)
  ****************/
 void load_binary_file(string file_name, char*& output, string& result)
 {
-    ifstream cur_file(file_name, ios::in | ios::binary | ios::ate);
+    ifstream cur_file(file_name.c_str(), ios::in | ios::binary | ios::ate);
 
     ifstream::pos_type filesize;
     char* file_contents;
@@ -212,8 +213,8 @@ void load_file(string file_name, char*& output, string& result, string& last_mod
     if (last_modified.size () > 0) last_modified.resize (last_modified.size() - 1);
 
     // Get the size of the file
-    ifstream file(file_name, ios::ate | ios::binary);
-    content_length = to_string(file.tellg());
+    ifstream file(file_name.c_str(), ios::ate | ios::binary);
+    content_length = to_string((long long int)(file.tellg()));
     file.close();
 }
 

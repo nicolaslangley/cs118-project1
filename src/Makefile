@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I. -lstdc++
+CFLAGS=-I. -std=c++0x -lstdc++
 DEPS = # header file 
 OBJ = serverFork.o
 
